@@ -47,8 +47,7 @@ Configuration:
 | CIDR Block | 10.0.0.0/16 |
 | Tenancy | Default |
 
-<img width="523" height="81" alt="image" src="https://github.com/user-attachments/assets/6f00e8e0-baf6-4ef3-94fe-51aaa49476f5" />
-
+### screenshot
 
 ![VPC Creation](images/vpc.png)
 
