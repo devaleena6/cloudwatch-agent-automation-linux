@@ -1,217 +1,279 @@
-# cloudwatch-agent-automation-linux
-To automate CloudWatch Alarm creation, you can use AWS Lambda written in Python. The Lambda function will automatically create alarms for an EC2 instance such as CPU, Memory, and Disk usage.
-Services used in this architecture:
+# CloudWatch Agent Automation for Linux
 
-Amazon VPC
+This project automates **CloudWatch monitoring setup for EC2 instances** using **AWS Lambda and AWS Systems Manager (SSM)**.
 
-Amazon EC2
+The automation performs the following tasks:
 
-Amazon CloudWatch
+- Creates a custom AWS network
+- Launches an EC2 instance
+- Automatically installs the CloudWatch Agent
+- Automatically creates CloudWatch alarms
+- Sends email alerts using SNS
 
-AWS Lambda
+---
 
-Amazon Simple Notification Service
+# AWS Services Used
 
-AWS Systems Manager
+- Amazon VPC
+- Amazon EC2
+- Amazon CloudWatch
+- AWS Lambda
+- Amazon SNS (Simple Notification Service)
+- AWS Systems Manager (SSM)
 
-AWS CloudWatch Automation Project
-Automated Monitoring with Lambda
+---
 
-This project demonstrates:
+# Project Architecture
 
-Creating a custom AWS network
+```
+EC2 Instance
+     │
+     ▼
+Lambda Automation
+     │
+     ▼
+SSM installs CloudWatch Agent
+     │
+     ▼
+CloudWatch collects metrics
+     │
+     ▼
+CloudWatch Alarm triggers
+     │
+     ▼
+SNS sends Email Alert
+```
 
-Launching EC2 instances
+---
 
-Automatically installing CloudWatch Agent
+# Step 1: Create VPC
 
-Automatically creating CloudWatch alarms
+Navigate to:
 
-Sending email alerts using SNS
-
-Step 1: Create VPC
-
-Open the console of
-Amazon VPC
-
-Navigate:
-
+```
 VPC → Create VPC
+```
 
 Configuration:
 
-Name: Monitoring-VPC
-CIDR Block: 10.0.0.0/16
-Tenancy: Default
+| Setting | Value |
+|-------|------|
+| Name | Monitoring-VPC |
+| CIDR Block | 10.0.0.0/16 |
+| Tenancy | Default |
 
-Click Create VPC
+Click **Create VPC**.
 
-Step 2: Create Subnet
+---
 
-Navigate:
+# Step 2: Create Subnet
 
+Navigate to:
+
+```
 VPC → Subnets → Create Subnet
+```
 
 Configuration:
 
-Subnet Name: Public-Subnet
-VPC: Monitoring-VPC
-Availability Zone: ap-south-1a
-CIDR: 10.0.1.0/24
-Step 3: Create Internet Gateway
+| Setting | Value |
+|-------|------|
+| Subnet Name | Public-Subnet |
+| VPC | Monitoring-VPC |
+| Availability Zone | ap-south-1a |
+| CIDR | 10.0.1.0/24 |
 
-Navigate:
+---
 
+# Step 3: Create Internet Gateway
+
+Navigate to:
+
+```
 VPC → Internet Gateway → Create
+```
 
 Configuration:
 
-Name: Monitoring-IGW
+| Setting | Value |
+|-------|------|
+| Name | Monitoring-IGW |
 
-Attach it to the VPC.
+Attach the Internet Gateway to **Monitoring-VPC**.
 
-Step 4: Configure Route Table
+---
 
-Navigate:
+# Step 4: Configure Route Table
 
+Navigate to:
+
+```
 VPC → Route Tables
+```
 
-Add route:
+Add Route:
 
-Destination: 0.0.0.0/0
-Target: Internet Gateway
+| Destination | Target |
+|-------------|--------|
+| 0.0.0.0/0 | Internet Gateway |
 
-Associate:
+Associate Route Table with **Public-Subnet**.
 
-Public-Subnet
-Step 5: Create Security Group
+---
 
-Open
-Amazon EC2
+# Step 5: Create Security Group
 
-Navigate:
+Navigate to:
 
+```
 EC2 → Security Groups → Create
+```
 
 Configuration:
 
-Name: Monitoring-SG
-VPC: Monitoring-VPC
+| Setting | Value |
+|-------|------|
+| Name | Monitoring-SG |
+| VPC | Monitoring-VPC |
 
-Inbound rules:
+Inbound Rules:
 
-SSH – Port 22 – My IP
-HTTP – Port 80 – Anywhere
-HTTPS – Port 443 – Anywhere
+| Type | Port | Source |
+|-----|------|--------|
+| SSH | 22 | My IP |
+| HTTP | 80 | Anywhere |
+| HTTPS | 443 | Anywhere |
 
-Outbound:
+Outbound Rules:
 
-Allow All Traffic
-Step 6: Launch EC2 Instance
+Allow **All Traffic**
 
-Navigate:
+---
 
+# Step 6: Launch EC2 Instance
+
+Navigate to:
+
+```
 EC2 → Launch Instance
+```
 
 Configuration:
 
-Name: Monitoring-Server
-AMI: Ubuntu 22.04
-Instance Type: t2.micro
-Key Pair: monitoring-key.pem
+| Setting | Value |
+|-------|------|
+| Name | Monitoring-Server |
+| AMI | Ubuntu 22.04 |
+| Instance Type | t2.micro |
+| Key Pair | monitoring-key.pem |
 
 Networking:
 
-VPC: Monitoring-VPC
-Subnet: Public-Subnet
-Auto Assign Public IP: Enable
-Security Group: Monitoring-SG
+| Setting | Value |
+|-------|------|
+| VPC | Monitoring-VPC |
+| Subnet | Public-Subnet |
+| Auto Assign Public IP | Enable |
+| Security Group | Monitoring-SG |
 
-Launch instance.
+Launch the instance.
 
-Step 7: Attach IAM Role to EC2
+---
 
-For automation using
-AWS Systems Manager
-the instance needs permissions.
+# Step 7: Attach IAM Role to EC2
 
-Navigate:
+Navigate to:
 
+```
 IAM → Roles → Create Role
+```
 
 Select:
 
+```
 AWS Service → EC2
+```
 
 Attach policies:
 
+```
 AmazonSSMManagedInstanceCore
 CloudWatchAgentServerPolicy
+```
 
 Role Name:
 
+```
 EC2-CloudWatch-Role
+```
 
-Attach the role to EC2:
+Attach the role:
 
+```
 EC2 → Instance → Actions → Security → Modify IAM Role
+```
 
-Select:
+Select **EC2-CloudWatch-Role**.
 
-EC2-CloudWatch-Role
-Step 8: Create SNS Alert Topic
+---
 
-Open
-Amazon Simple Notification Service
+# Step 8: Create SNS Alert Topic
 
-Navigate:
+Navigate to:
 
+```
 SNS → Topics → Create Topic
+```
 
 Configuration:
 
-Name: ServerAlert
-Type: Standard
+| Setting | Value |
+|-------|------|
+| Name | ServerAlert |
+| Type | Standard |
 
-Create subscription:
+Create Subscription:
 
-Protocol: Email
-Endpoint: your-email@example.com
+| Setting | Value |
+|-------|------|
+| Protocol | Email |
+| Endpoint | your-email@example.com |
 
-Confirm email.
+Confirm the email subscription.
 
-Step 9: Create Lambda Function
+---
 
-Open
-AWS Lambda
+# Step 9: Create Lambda Function
 
-Navigate:
+Navigate to:
 
+```
 Lambda → Create Function
+```
 
 Configuration:
 
-Function Name: CloudWatch-Automation
-Runtime: Python 3.11
+| Setting | Value |
+|-------|------|
+| Function Name | CloudWatch-Automation |
+| Runtime | Python 3.11 |
 
-Create IAM role with permissions:
+Attach IAM policies:
 
+```
 AmazonSSMFullAccess
 CloudWatchFullAccess
 AmazonEC2ReadOnlyAccess
 SNSFullAccess
-Step 10: Deploy Lambda Automation Script
+```
 
-Paste the Lambda code.
+---
 
-This code performs:
+# Step 10: Deploy Lambda Automation Script
 
-1️⃣ Install CloudWatch agent using SSM
-2️⃣ Start agent
-3️⃣ Create CPU alarms automatically
+Paste the following Python code in the Lambda function.
 
-Example code:
-
+```python
 import boto3
 
 ec2 = boto3.client('ec2')
@@ -235,7 +297,6 @@ def install_cloudwatch_agent(instance_id):
         Parameters={'commands': commands}
     )
 
-
 def create_alarm(instance_id):
 
     cloudwatch.put_metric_alarm(
@@ -247,11 +308,15 @@ def create_alarm(instance_id):
         EvaluationPeriods=1,
         Threshold=80,
         ComparisonOperator="GreaterThanThreshold",
-        Dimensions=[{'Name': 'InstanceId','Value': instance_id}],
+        Dimensions=[
+            {
+                'Name': 'InstanceId',
+                'Value': instance_id
+            }
+        ],
         AlarmActions=[SNS_TOPIC_ARN],
         Unit="Percent"
     )
-
 
 def lambda_handler(event, context):
 
@@ -266,47 +331,62 @@ def lambda_handler(event, context):
             create_alarm(instance_id)
 
     return "CloudWatch automation completed"
+```
 
-Deploy function.
+---
 
-Step 11: Test Lambda Function
+# Step 11: Test Lambda Function
 
-Navigate:
+Navigate to:
 
+```
 Lambda → Test
+```
 
 When executed, Lambda will:
 
-1 Install CloudWatch Agent
-2 Start Monitoring
-3 Create CPU Alarm
+- Install CloudWatch Agent
+- Start monitoring
+- Create CPU alarms
 
-Verify alarms in
-Amazon CloudWatch
+---
 
-Navigate:
+# Step 12: Verify CloudWatch Alarms
 
+Navigate to:
+
+```
 CloudWatch → Alarms
-Step 12: Final Architecture
-EC2 Instance
-     ↓
-Lambda Automation
-     ↓
-SSM installs CloudWatch Agent
-     ↓
-CloudWatch collects metrics
-     ↓
-CloudWatch Alarm
-     ↓
-SNS Email Alert
-Step 13: Expected Output
+```
+
+You should see alarms like:
+
+```
+i-xxxxxxxxxxxx-HighCPU
+```
+
+---
+
+# Expected Output
 
 After automation:
 
-CloudWatch agent installed automatically
+- CloudWatch Agent installed automatically
+- EC2 metrics monitored
+- CPU alarms created automatically
+- Email alerts sent when CPU usage exceeds 80%
 
-CPU metrics monitored
+---
 
-Alarm created automatically
+# Future Improvements
 
-Email alerts sent when CPU > 80%
+- Add Memory monitoring
+- Add Disk monitoring
+- Automatically detect new EC2 instances
+- Trigger Lambda using EventBridge
+
+---
+
+# Author
+
+DevOps Cloud Automation Project
