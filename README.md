@@ -25,24 +25,9 @@ The automation performs the following tasks:
 
 # Project Architecture
 
-```
-EC2 Instance
-     │
-     ▼
-Lambda Automation
-     │
-     ▼
-SSM installs CloudWatch Agent
-     │
-     ▼
-CloudWatch collects metrics
-     │
-     ▼
-CloudWatch Alarm triggers
-     │
-     ▼
-SNS sends Email Alert
-```
+![Architecture Diagram](images/architecture.png)
+
+*(Add your architecture diagram in the images folder)*
 
 ---
 
@@ -62,7 +47,10 @@ Configuration:
 | CIDR Block | 10.0.0.0/16 |
 | Tenancy | Default |
 
-Click **Create VPC**.
+<img width="523" height="81" alt="image" src="https://github.com/user-attachments/assets/6f00e8e0-baf6-4ef3-94fe-51aaa49476f5" />
+
+
+![VPC Creation](images/vpc.png)
 
 ---
 
@@ -83,6 +71,10 @@ Configuration:
 | Availability Zone | ap-south-1a |
 | CIDR | 10.0.1.0/24 |
 
+### Screenshot
+
+![Subnet Creation](images/subnet.png)
+
 ---
 
 # Step 3: Create Internet Gateway
@@ -99,7 +91,11 @@ Configuration:
 |-------|------|
 | Name | Monitoring-IGW |
 
-Attach the Internet Gateway to **Monitoring-VPC**.
+Attach it to **Monitoring-VPC**.
+
+### Screenshot
+
+![Internet Gateway](images/igw.png)
 
 ---
 
@@ -117,7 +113,11 @@ Add Route:
 |-------------|--------|
 | 0.0.0.0/0 | Internet Gateway |
 
-Associate Route Table with **Public-Subnet**.
+Associate the Route Table with **Public-Subnet**.
+
+### Screenshot
+
+![Route Table](images/route-table.png)
 
 ---
 
@@ -148,6 +148,10 @@ Outbound Rules:
 
 Allow **All Traffic**
 
+### Screenshot
+
+![Security Group](images/security-group.png)
+
 ---
 
 # Step 6: Launch EC2 Instance
@@ -176,7 +180,9 @@ Networking:
 | Auto Assign Public IP | Enable |
 | Security Group | Monitoring-SG |
 
-Launch the instance.
+### Screenshot
+
+![EC2 Launch](images/ec2.png)
 
 ---
 
@@ -207,13 +213,15 @@ Role Name:
 EC2-CloudWatch-Role
 ```
 
-Attach the role:
+Attach role:
 
 ```
 EC2 → Instance → Actions → Security → Modify IAM Role
 ```
 
-Select **EC2-CloudWatch-Role**.
+### Screenshot
+
+![IAM Role](images/iam-role.png)
 
 ---
 
@@ -232,14 +240,16 @@ Configuration:
 | Name | ServerAlert |
 | Type | Standard |
 
-Create Subscription:
+Create subscription:
 
 | Setting | Value |
 |-------|------|
 | Protocol | Email |
 | Endpoint | your-email@example.com |
 
-Confirm the email subscription.
+### Screenshot
+
+![SNS Topic](images/sns.png)
 
 ---
 
@@ -258,7 +268,7 @@ Configuration:
 | Function Name | CloudWatch-Automation |
 | Runtime | Python 3.11 |
 
-Attach IAM policies:
+Attach policies:
 
 ```
 AmazonSSMFullAccess
@@ -266,6 +276,10 @@ CloudWatchFullAccess
 AmazonEC2ReadOnlyAccess
 SNSFullAccess
 ```
+
+### Screenshot
+
+![Lambda Creation](images/lambda.png)
 
 ---
 
@@ -308,12 +322,7 @@ def create_alarm(instance_id):
         EvaluationPeriods=1,
         Threshold=80,
         ComparisonOperator="GreaterThanThreshold",
-        Dimensions=[
-            {
-                'Name': 'InstanceId',
-                'Value': instance_id
-            }
-        ],
+        Dimensions=[{'Name': 'InstanceId','Value': instance_id}],
         AlarmActions=[SNS_TOPIC_ARN],
         Unit="Percent"
     )
@@ -349,6 +358,10 @@ When executed, Lambda will:
 - Start monitoring
 - Create CPU alarms
 
+### Screenshot
+
+![Lambda Test](images/lambda-test.png)
+
 ---
 
 # Step 12: Verify CloudWatch Alarms
@@ -359,11 +372,15 @@ Navigate to:
 CloudWatch → Alarms
 ```
 
-You should see alarms like:
+Example alarm:
 
 ```
 i-xxxxxxxxxxxx-HighCPU
 ```
+
+### Screenshot
+
+![CloudWatch Alarm](images/cloudwatch-alarm.png)
 
 ---
 
@@ -389,4 +406,4 @@ After automation:
 
 # Author
 
-DevOps Cloud Automation Project
+Cloud Automation / DevOps Project
