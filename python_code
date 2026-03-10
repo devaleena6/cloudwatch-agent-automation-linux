@@ -1,0 +1,88 @@
+import boto3
+
+def lambda_handler(event, context):
+
+    ssm = boto3.client('ssm')
+    cloudwatch = boto3.client('cloudwatch')
+
+    instance_id = "i-0957207b56c717f12"
+
+    # Commands to install and configure CloudWatch Agent
+    commands = [
+
+        "sudo apt update -y",
+
+        "wget -q https://s3.amazonaws.com/amazoncloudwatch-agent/ubuntu/amd64/latest/amazon-cloudwatch-agent.deb",
+
+        "sudo dpkg -i -E amazon-cloudwatch-agent.deb",
+
+        "sudo mkdir -p /opt/aws/amazon-cloudwatch-agent/etc",
+
+        "sudo rm -f /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json",
+
+        "echo '{\"agent\":{\"metrics_collection_interval\":60,\"run_as_user\":\"root\"},\"metrics\":{\"append_dimensions\":{\"InstanceId\":\"${aws:InstanceId}\"},\"metrics_collected\":{\"mem\":{\"measurement\":[\"mem_used_percent\"],\"metrics_collection_interval\":60},\"disk\":{\"resources\":[\"/\"],\"measurement\":[\"used_percent\"],\"metrics_collection_interval\":60}}}}' | sudo tee /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json",
+
+        "sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a stop",
+
+        "sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -c file:/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json -s",
+
+        "sudo systemctl enable amazon-cloudwatch-agent",
+
+        "sudo systemctl restart amazon-cloudwatch-agent"
+    ]
+
+    # Execute commands on EC2 via SSM
+    ssm.send_command(
+        InstanceIds=[instance_id],
+        DocumentName="AWS-RunShellScript",
+        Parameters={"commands": commands}
+    )
+
+    # Alarm configuration
+    alarms = [
+        {
+            "name": f"{instance_id}-CPU-High",
+            "metric": "CPUUtilization",
+            "namespace": "AWS/EC2",
+            "threshold": 80
+        },
+        {
+            "name": f"{instance_id}-Memory-High",
+            "metric": "mem_used_percent",
+            "namespace": "CWAgent",
+            "threshold": 80
+        },
+        {
+            "name": f"{instance_id}-Disk-High",
+            "metric": "disk_used_percent",
+            "namespace": "CWAgent",
+            "threshold": 80
+        }
+    ]
+
+    # Create alarms
+    for alarm in alarms:
+
+        cloudwatch.put_metric_alarm(
+            AlarmName=alarm["name"],
+            MetricName=alarm["metric"],
+            Namespace=alarm["namespace"],
+            Statistic="Average",
+            Period=300,
+            EvaluationPeriods=1,
+            Threshold=alarm["threshold"],
+            ComparisonOperator="GreaterThanThreshold",
+            Dimensions=[
+                {
+                    "Name": "InstanceId",
+                    "Value": instance_id
+                }
+            ],
+            AlarmDescription=f"{alarm['metric']} greater than {alarm['threshold']}%",
+            ActionsEnabled=False
+        )
+
+    return {
+        "statusCode": 200,
+        "body": "CloudWatch Agent installed and alarms created successfully"
+    }
